@@ -2,6 +2,16 @@ name: Docker latest image
 
 on:
   workflow_call:
+    inputs:
+      GLOBAL_REPO_NAME:
+        required: true
+        type: string
+      PATH_TO_DOCKERFILE:
+        required: true
+        type: string
+      GLOBAL_IMAGE_NAME:
+        required: true
+        type: string
     secrets:
       VAULT_ADDR:
         required: true
@@ -11,12 +21,14 @@ on:
         required: true
 
 jobs:
+
+  build-context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: danubetech/github-action-log-build-context@v0.1.0
+
   publish-image:
     runs-on: ubuntu-latest
-    env:
-      VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
-      CI_SECRET_READER_PERIODIC_TOKEN: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
-      VAULTCA: ${{ secrets.VAULTCA }}
     steps:
       - uses: actions/checkout@master
       - name: Import Secrets
