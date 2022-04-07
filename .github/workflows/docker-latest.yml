@@ -13,6 +13,10 @@ on:
 jobs:
   publish-image:
     runs-on: ubuntu-latest
+    env:
+      VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+      CI_SECRET_READER_PERIODIC_TOKEN: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
+      VAULTCA: ${{ secrets.VAULTCA }}
     steps:
       - uses: actions/checkout@master
       - name: Import Secrets
