@@ -2,6 +2,13 @@ name: Docker latest image
 
 on:
   workflow_call:
+    secrets:
+      VAULT_ADDR:
+        required: true
+      CI_SECRET_READER_PERIODIC_TOKEN:
+        required: true
+      VAULTCA:
+        required: true
 
 jobs:
   publish-image:
