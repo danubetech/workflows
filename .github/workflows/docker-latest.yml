@@ -47,7 +47,7 @@ jobs:
         run: docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}"
 
       - name: Login user to repo
-        run: echo "${{ inputs.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ inputs.DOCKER_USERNAME }}" --password-stdin
+        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
 
       - name: Push image
         run: docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}"
@@ -59,4 +59,4 @@ jobs:
           status: ${{ job.status }}
           fields: repo,commit,action,eventName,ref,workflow
         env:
-          SLACK_WEBHOOK_URL: ${{ inputs.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
