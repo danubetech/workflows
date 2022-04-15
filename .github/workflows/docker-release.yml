@@ -22,6 +22,8 @@ on:
         required: true
       VAULTCA:
         required: true
+      SLACK_WEBHOOK_URL:
+        required: true
 
 jobs:
 
@@ -106,8 +108,7 @@ jobs:
           caCertificate: ${{ secrets.VAULTCA }}
           secrets: |
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
-            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD ;
-            ci/data/gh-workflows/deployment-status slack-webhook-url | SLACK_WEBHOOK_URL
+            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
 
       - name: Prepare multi server settings file
         uses: danubetech/github-action-prepare-maven-settings-xml@master
@@ -156,8 +157,7 @@ jobs:
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD ;
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
-            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD ;
-            ci/data/gh-workflows/deployment-status slack-webhook-url | SLACK_WEBHOOK_URL
+            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
 
       - uses: actions/checkout@master
         with:

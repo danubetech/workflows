@@ -19,6 +19,8 @@ on:
         required: true
       VAULTCA:
         required: true
+      SLACK_WEBHOOK_URL:
+        required: true
 
 jobs:
 
@@ -40,8 +42,7 @@ jobs:
           caCertificate: ${{ secrets.VAULTCA }}
           secrets: |
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
-            ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD ;
-            ci/data/gh-workflows/deployment-status slack-webhook-url | SLACK_WEBHOOK_URL
+            ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD
 
       - name: Run build image action
         run: docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}"
