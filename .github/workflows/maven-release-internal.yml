@@ -35,7 +35,7 @@ jobs:
           secrets: |
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
             ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD ;
-            ci/data/gh-workflows/maven-release-workflows ${{ PRIVATE_KEY_IDENTIFIER }} | SSH_PRIVATE_KEY
+            ci/data/gh-workflows/maven-release-workflows ${{ inputs.PRIVATE_KEY_IDENTIFIER }} | SSH_PRIVATE_KEY
 
       - name: Release to Danubetech Nexus
         uses: qcastel/github-actions-maven-release@v1.12.31
