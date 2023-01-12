@@ -35,15 +35,6 @@ jobs:
   create-tag:
     runs-on: ubuntu-latest
     steps:
-      - name: Import Secrets
-        uses: hashicorp/vault-action@v2.3.0
-        with:
-          url: ${{ secrets.VAULT_ADDR }}
-          token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
-          caCertificate: ${{ secrets.VAULTCA }}
-          secrets: |
-            ci/data/gh-workflows/deployment-status slack-webhook-url | SLACK_WEBHOOK_URL
-
       - uses: actions/checkout@master
 
       - name: Set user data
@@ -64,7 +55,7 @@ jobs:
           status: ${{ job.status }}
           fields: repo,commit,action,eventName,ref,workflow
         env:
-          SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   publish-image:
     needs: [create-tag]
@@ -80,7 +71,8 @@ jobs:
           secrets: |
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD ;
-            ci/data/gh-workflows/deployment-status slack-webhook-url | SLACK_WEBHOOK_URL
+            ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
+            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
 
       - uses: actions/checkout@master
         with:
@@ -91,7 +83,10 @@ jobs:
         run: echo "::set-output name=SHORT_SHA::$(git rev-parse --short HEAD)"
 
       - name: Build image
-        run: docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ inputs.GLOBAL_RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
+        run: |
+          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ inputs.GLOBAL_RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
+          --build-arg DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }} \
+          --build-arg DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
 
       - name: Login user to repo
         run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
@@ -106,7 +101,7 @@ jobs:
           status: ${{ job.status }}
           fields: repo,commit,action,eventName,ref,workflow
         env:
-          SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Remove release tag
         if: failure()
