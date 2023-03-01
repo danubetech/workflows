@@ -35,7 +35,7 @@ jobs:
             ci/data/gh-workflows/maven-release-workflow token | TOKEN
 
       - name: Release to Danubetech Nexus
-        uses: qcastel/github-actions-maven-release@v1.12.31
+        uses: qcastel/github-actions-maven-release@v1.12.39
         with:
           release-branch-name: main
           maven-repo-server-id: ${{ inputs.GLOBAL_MAVEN_REPO_SERVER_ID }}
