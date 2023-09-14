@@ -9,6 +9,9 @@ on:
       PRIVATE_KEY_IDENTIFIER:
         required: true
         type: string
+      MAVEN_PROJECT_FOLDER:
+        required: true
+        type: string
     secrets:
       VAULT_ADDR:
         required: true
