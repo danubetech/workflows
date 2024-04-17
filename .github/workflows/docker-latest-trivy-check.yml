@@ -1,0 +1,80 @@
+name: Docker latest image with Trivy check
+
+on:
+  workflow_call:
+    inputs:
+      GLOBAL_REPO_NAME:
+        required: true
+        type: string
+      PATH_TO_DOCKERFILE:
+        required: true
+        type: string
+      GLOBAL_IMAGE_NAME:
+        required: true
+        type: string
+    secrets:
+      VAULT_ADDR:
+        required: true
+      CI_SECRET_READER_PERIODIC_TOKEN:
+        required: true
+      VAULTCA:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: true
+
+jobs:
+
+  build-context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: danubetech/github-action-log-build-context@v0.1.0
+
+  publish-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Import Secrets
+        uses: hashicorp/vault-action@v2.3.0
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
+          caCertificate: ${{ secrets.VAULTCA }}
+          secrets: |
+            ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
+            ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD ;
+            ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
+            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
+
+      - name: Run build image action
+        run: |
+          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}" \
+          --build-arg DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }} \
+          --build-arg DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
+
+      - name: Login user to repo
+        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Push image
+        run: docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}"
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}"
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Slack notification
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,commit,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
