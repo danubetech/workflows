@@ -1,0 +1,31 @@
+name: Trivy check
+
+on:
+  workflow_call:
+    inputs:
+      GLOBAL_REPO_NAME:
+        required: true
+        type: string
+      GLOBAL_IMAGE_NAME:
+        required: true
+        type: string
+
+jobs:
+
+  trivy-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ env.GLOBAL_REPO_NAME }}/${{ env.GLOBAL_IMAGE_NAME }}"
+          format: 'table'
+          output: 'trivy-results.log'
+
+      - name: Push Trivy scan results to Repo
+        run: |
+          git config --global user.name "Trivy Scan"
+          git config --global user.email "admin@danubetech.com"
+          git add trivy-results.log
+          git commit -m "ci: update trivy-results.log file"
+          git push
