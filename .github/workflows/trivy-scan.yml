@@ -34,15 +34,15 @@ jobs:
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD 
 
-      - name: Login user to repo
-        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
-
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}"
           format: 'table'
           output: 'trivy-results.log'
+        env:
+          TRIVY_USERNAME: ${{ env.DOCKER_USERNAME }}
+          TRIVY_PASSWORD: ${{ env.DOCKER_PASSWORD }}
 
       - name: Push Trivy scan results to Repo
         run: |
