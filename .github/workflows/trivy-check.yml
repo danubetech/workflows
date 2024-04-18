@@ -26,8 +26,12 @@ jobs:
 
       - name: Push Trivy scan results to Repo
         run: |
-          git config --global user.name "Trivy Scan"
-          git config --global user.email "admin@danubetech.com"
-          git add trivy-results.log
-          git commit -m "ci: update trivy-results.log file"
-          git push
+          if [[ $(git status --porcelain | grep "trivy-results.log") ]]; then
+            echo "No changes to commit. Skipping..."
+          else
+            git config --global user.name "Trivy Scan"
+            git config --global user.email "admin@danubetech.com"
+            git add trivy-results.log
+            git commit -m "ci: update trivy-results.log file"
+            git push
+          fi
