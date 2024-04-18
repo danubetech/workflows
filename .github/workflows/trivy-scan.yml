@@ -1,4 +1,4 @@
-name: Trivy check
+name: Trivy scan
 
 on:
   workflow_call:
