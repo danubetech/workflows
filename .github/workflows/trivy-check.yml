@@ -26,7 +26,7 @@ jobs:
 
       - name: Push Trivy scan results to Repo
         run: |
-          if [[ $(git status --porcelain | grep "trivy-results.log") ]]; then
+          if git diff --quiet HEAD -- "trivy-results.log"; then
             echo "No changes to commit. Skipping..."
           else
             git config --global user.name "Trivy Scan"
