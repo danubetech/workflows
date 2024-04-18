@@ -48,16 +48,15 @@ jobs:
         run: |
           git config --global user.name "Trivy Scan"
           git config --global user.email "admin@danubetech.com"
+          git add trivy-results.log
           git status
           ls -al
           if ! test -f "trivy-results.log"; then
-            git add trivy-results.log
             git commit -m "ci: update trivy-results.log file"
             git push
           elif git diff --quiet HEAD -- "trivy-results.log"; then
             echo "No changes to commit. Skipping..."
           else
-            git add trivy-results.log
             git commit -m "ci: update trivy-results.log file"
             git push
           fi
