@@ -9,6 +9,13 @@ on:
       GLOBAL_IMAGE_NAME:
         required: true
         type: string
+    secrets:
+      VAULT_ADDR:
+        required: true
+      CI_SECRET_READER_PERIODIC_TOKEN:
+        required: true
+      VAULTCA:
+        required: true
 
 jobs:
 
