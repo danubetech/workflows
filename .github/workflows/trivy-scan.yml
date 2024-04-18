@@ -17,6 +17,19 @@ jobs:
     steps:
       - uses: actions/checkout@master
 
+      - name: Import Secrets
+        uses: hashicorp/vault-action@v2.3.0
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
+          caCertificate: ${{ secrets.VAULTCA }}
+          secrets: |
+            ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
+            ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD 
+
+      - name: Login user to repo
+        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
