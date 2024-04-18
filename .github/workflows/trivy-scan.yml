@@ -46,7 +46,7 @@ jobs:
 
       - name: Push Trivy scan results to Repo
         run: |
-          if [ ! -f trivy-results.log ]; then
+          if ! test -f "trivy-results.log"; then
             git config --global user.name "Trivy Scan"
             git config --global user.email "admin@danubetech.com"
             git add trivy-results.log
