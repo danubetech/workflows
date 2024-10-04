@@ -1,0 +1,48 @@
+name: GitLeaks Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Git
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+
+      - name: Install GitLeaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64.tar.gz | tar -xz
+          sudo mv gitleaks /usr/local/bin/gitleaks
+
+      - name: Run GitLeaks
+        run: |
+          gitleaks detect --source=. --report-path=gitleaks-report.json --report-format=json --exit-code=0
+
+      - name: Check if GitLeaks Report Has Changed
+        id: changes_check
+        run: |
+          if git diff --quiet gitleaks-report.json; then
+            echo "No changes detected in gitleaks-report.json"
+            echo "changes=false" >> $GITHUB_ENV
+          else
+            echo "Changes detected in gitleaks-report.json"
+            echo "changes=true" >> $GITHUB_ENV
+          fi
+
+      - name: Commit and Push GitLeaks Report
+        if: env.changes == 'true'
+        run: |
+          git add gitleaks-report.json
+          git commit -m "ci: gitleaks report"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
