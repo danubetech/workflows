@@ -92,7 +92,7 @@ jobs:
       RELEASE_VERSION: ${{ needs.set-version.outputs.releaseVersion }}
     steps:
       - name: Import Secrets
-        uses: hashicorp/vault-action@v2.3.0
+        uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
           token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
@@ -139,7 +139,7 @@ jobs:
     steps:
 
       - name: Import Secrets
-        uses: hashicorp/vault-action@v2.3.0
+        uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
           token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
@@ -192,7 +192,7 @@ jobs:
       DEV_VERSION: ${{ needs.set-version.outputs.devVersion }}
     steps:
       - name: Import Secrets
-        uses: hashicorp/vault-action@v2.3.0
+        uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
           token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
