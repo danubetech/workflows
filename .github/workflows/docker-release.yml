@@ -45,6 +45,7 @@ jobs:
           release-type: ${{ github.event.inputs.version-core }}
 
   set-version:
+    needs: node-preparation
     runs-on: ubuntu-latest
     outputs:
       releaseVersion: ${{ steps.read_and_set_version.outputs.releaseVersion }}
