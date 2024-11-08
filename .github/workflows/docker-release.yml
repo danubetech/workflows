@@ -32,6 +32,18 @@ jobs:
     steps:
       - uses: danubetech/github-action-log-build-context@v0.1.0
 
+  node-preparation:
+    if: ${{ needs.set-framework.outputs.framework }} == 'node'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Update package.json
+        uses: danubetech/github-action-nodejs-release@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: ${{ github.event.inputs.release-type }}
+
   set-version:
     runs-on: ubuntu-latest
     outputs:
