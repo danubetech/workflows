@@ -42,7 +42,7 @@ jobs:
         uses: danubetech/github-action-nodejs-release@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          release-type: ${{ github.event.inputs.release-type }}
+          release-type: ${{ github.event.inputs.version-core }}
 
   set-version:
     runs-on: ubuntu-latest
