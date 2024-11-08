@@ -34,7 +34,17 @@ jobs:
     steps:
       - uses: danubetech/github-action-log-build-context@v0.1.0
 
+  set-framework:
+    runs-on: ubuntu-latest
+    outputs:
+      framework: ${{ steps.set_framework.outputs.framework }}
+    steps:
+      - name: Set framework to output variable
+        id: set_framework
+        run: echo "::set-output name=framework::${{ inputs.GLOBAL_FRAMEWORK }}"
+
   node-preparation:
+    needs: set-framework
     if: ${{ needs.set-framework.outputs.framework }} == 'node'
     runs-on: ubuntu-latest
     steps:
@@ -89,15 +99,6 @@ jobs:
           fields: repo,commit,action,eventName,ref,workflow
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-  set-framework:
-    runs-on: ubuntu-latest
-    outputs:
-      framework: ${{ steps.set_framework.outputs.framework }}
-    steps:
-      - name: Set framework to output variable
-        id: set_framework
-        run: echo "::set-output name=framework::${{ inputs.GLOBAL_FRAMEWORK }}"
 
   validate-pom:
     needs: [create-tag, set-version, set-framework]
