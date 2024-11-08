@@ -24,6 +24,16 @@ on:
 
 jobs:
 
+  check-commit-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check commit message
+        id: check
+        if: "contains(github.event.head_commit.message, '[ci] Set') && contains(github.event.head_commit.message, '-SNAPSHOT')"
+        run: |
+          echo "Skipping workflow for version update commit"
+          exit 78  # neutral exit code
+
   build-context:
     runs-on: ubuntu-latest
     steps:
