@@ -24,8 +24,6 @@ on:
         required: true
       SLACK_WEBHOOK_URL:
         required: true
-      TOKEN:
-        required: false
 
 jobs:
 
@@ -53,7 +51,6 @@ jobs:
       - name: Update package.json
         uses: danubetech/github-action-nodejs-release@main
         with:
-          github-token: ${{ secrets.TOKEN }}
           release-type: ${{ github.event.inputs.version-core }}
 
   set-version:
