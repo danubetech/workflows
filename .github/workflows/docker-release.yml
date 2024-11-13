@@ -41,6 +41,10 @@ jobs:
         id: set_framework
         run: echo "::set-output name=framework::${{ inputs.GLOBAL_FRAMEWORK }}"
 
+      - name: Stop workflow on failure
+        if: failure()
+        run: exit 1 # Exits the workflow if any of the previous steps failed
+
   set-version:
     runs-on: ubuntu-latest
     outputs:
@@ -55,6 +59,10 @@ jobs:
         with:
           framework: ${{ inputs.GLOBAL_FRAMEWORK }}
           version-core: ${{ github.event.inputs.version-core }}
+
+      - name: Stop workflow on failure
+        if: failure()
+        run: exit 1 # Exits the workflow if any of the previous steps failed
 
   create-tag:
     needs: set-version
@@ -84,8 +92,12 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
+      - name: Stop workflow on failure
+        if: failure()
+        run: exit 1 # Exits the workflow if any of the previous steps failed
+
   validate-pom:
-    needs: [create-tag, set-version, set-framework]
+    needs: [ create-tag, set-version, set-framework ]
     if: ${{ needs.set-framework.outputs.framework == 'maven' }}
     runs-on: ubuntu-latest
     env:
@@ -125,14 +137,19 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Remove release tag
+      - name: Remove release tag on failure
         if: failure()
         run: |
           git tag -d "${{ env.RELEASE_VERSION }}"
           git push --delete origin "${{ env.RELEASE_VERSION }}"
 
+      - name: Stop workflow on failure
+        if: failure()
+        run: exit 1 # Exits the workflow if any of the previous steps failed
+
   publish-image:
-    needs: [validate-pom, set-version, create-tag]
+    needs: [ validate-pom, set-version, create-tag ]
+    if: always()
     runs-on: ubuntu-latest
     env:
       RELEASE_VERSION: ${{ needs.set-version.outputs.releaseVersion }}
@@ -186,7 +203,7 @@ jobs:
           git push --delete origin "${{ env.RELEASE_VERSION }}"
 
   update-package-json:
-    needs: [publish-image, set-version]
+    needs: [ publish-image, set-version ]
     if: ${{ needs.set-framework.outputs.framework == 'node' }}
     runs-on: ubuntu-latest
     env:
@@ -210,7 +227,7 @@ jobs:
           git push
 
   increase-to-next-snapshop:
-    needs: [publish-image, set-version]
+    needs: [ publish-image, set-version ]
     if: ${{ needs.set-framework.outputs.framework == 'maven' }}
     runs-on: ubuntu-latest
     env:
