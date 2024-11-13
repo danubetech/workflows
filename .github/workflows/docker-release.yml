@@ -41,20 +41,7 @@ jobs:
         id: set_framework
         run: echo "::set-output name=framework::${{ inputs.GLOBAL_FRAMEWORK }}"
 
-  node-preparation:
-    needs: set-framework
-    if: ${{ needs.set-framework.outputs.framework }} == 'node'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-
-      - name: Update package.json
-        uses: danubetech/github-action-nodejs-release@main
-        with:
-          release-type: ${{ github.event.inputs.version-core }}
-
   set-version:
-    needs: node-preparation
     runs-on: ubuntu-latest
     outputs:
       releaseVersion: ${{ steps.read_and_set_version.outputs.releaseVersion }}
@@ -99,7 +86,7 @@ jobs:
 
   validate-pom:
     needs: [create-tag, set-version, set-framework]
-    if: ${{ needs.set-framework.outputs.framework }} == 'maven'
+    if: ${{ needs.set-framework.outputs.framework == 'maven' }}
     runs-on: ubuntu-latest
     env:
       RELEASE_VERSION: ${{ needs.set-version.outputs.releaseVersion }}
@@ -198,8 +185,33 @@ jobs:
           git tag -d "${{ env.RELEASE_VERSION }}"
           git push --delete origin "${{ env.RELEASE_VERSION }}"
 
+  update-package-json:
+    needs: [publish-image, set-version]
+    if: ${{ needs.set-framework.outputs.framework == 'node' }}
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ needs.set-version.outputs.releaseVersion }}
+    steps:
+      - name: Setup Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Update package.json version
+        run: |
+          # Use jq to update the version field
+          jq '.version = "${{ env.RELEASE_VERSION }}"' package.json > temp.json
+          mv temp.json package.json
+
+      - name: Commit and push changes
+        run: |
+          git add package.json
+          git commit -m "[skip ci] Update version to ${{ env.RELEASE_VERSION }}"
+          git push
+
   increase-to-next-snapshop:
     needs: [publish-image, set-version]
+    if: ${{ needs.set-framework.outputs.framework == 'maven' }}
     runs-on: ubuntu-latest
     env:
       DEV_VERSION: ${{ needs.set-version.outputs.devVersion }}
