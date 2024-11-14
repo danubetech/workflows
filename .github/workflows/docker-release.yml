@@ -32,129 +32,10 @@ jobs:
     steps:
       - uses: danubetech/github-action-log-build-context@v0.1.0
 
-  set-framework:
+  build-and-release:
     runs-on: ubuntu-latest
-    outputs:
-      framework: ${{ steps.set_framework.outputs.framework }}
+
     steps:
-      - name: Set framework to output variable
-        id: set_framework
-        run: echo "::set-output name=framework::${{ inputs.GLOBAL_FRAMEWORK }}"
-
-      - name: Stop workflow on failure
-        if: failure()
-        run: exit 1 # Exits the workflow if any of the previous steps failed
-
-  set-version:
-    runs-on: ubuntu-latest
-    outputs:
-      releaseVersion: ${{ steps.read_and_set_version.outputs.releaseVersion }}
-      devVersion: ${{ steps.read_and_set_version.outputs.devVersion }}
-    steps:
-      - uses: actions/checkout@master
-
-      - name: Read and set version
-        id: read_and_set_version
-        uses: danubetech/github-action-read-version@main
-        with:
-          framework: ${{ inputs.GLOBAL_FRAMEWORK }}
-          version-core: ${{ github.event.inputs.version-core }}
-
-      - name: Stop workflow on failure
-        if: failure()
-        run: exit 1 # Exits the workflow if any of the previous steps failed
-
-  create-tag:
-    needs: set-version
-    runs-on: ubuntu-latest
-    env:
-      RELEASE_VERSION: ${{ needs.set-version.outputs.releaseVersion }}
-    steps:
-      - uses: actions/checkout@master
-
-      - name: Set user data
-        run: |
-          git config --global user.email "admin@danubetech.com"
-          git config --global user.name "Github Workflow"
-
-      - name: Create tag
-        run: git tag -a "${{ env.RELEASE_VERSION }}" -m "[skip ci] Release tag ${{ env.RELEASE_VERSION }}"
-
-      - name: Push tag
-        run: git push origin "${{ env.RELEASE_VERSION }}"
-
-      - name: Slack notification
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          fields: repo,commit,action,eventName,ref,workflow
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Stop workflow on failure
-        if: failure()
-        run: exit 1 # Exits the workflow if any of the previous steps failed
-
-  validate-pom:
-    needs: [ create-tag, set-version, set-framework ]
-    if: ${{ needs.set-framework.outputs.framework == 'maven' }}
-    runs-on: ubuntu-latest
-    env:
-      RELEASE_VERSION: ${{ needs.set-version.outputs.releaseVersion }}
-    steps:
-      - name: Import Secrets
-        uses: hashicorp/vault-action@v3
-        with:
-          url: ${{ secrets.VAULT_ADDR }}
-          token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
-          caCertificate: ${{ secrets.VAULTCA }}
-          secrets: |
-            ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
-            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
-
-      - name: Prepare multi server settings file
-        uses: danubetech/github-action-prepare-maven-settings-xml@master
-        with:
-          server_ids: danubetech-maven-releases,danubetech-maven-internal
-
-      - uses: actions/checkout@master
-        with:
-          ref: ${{ env.RELEASE_VERSION }}
-
-      - name: Validate pom.xml
-        run: |
-          echo "$SETTINGS_FILE" > ./multi-server-template.xml
-          envsubst < ./multi-server-template.xml > ./settings.xml
-          mvn validate -P ci --settings ./settings.xml
-
-      - name: Slack notification
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          fields: repo,commit,action,eventName,ref,workflow
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Remove release tag on failure
-        if: failure()
-        run: |
-          git tag -d "${{ env.RELEASE_VERSION }}"
-          git push --delete origin "${{ env.RELEASE_VERSION }}"
-
-      - name: Stop workflow on failure
-        if: failure()
-        run: exit 1 # Exits the workflow if any of the previous steps failed
-
-  publish-image:
-    needs: [ validate-pom, set-version, create-tag ]
-    if: always()
-    runs-on: ubuntu-latest
-    env:
-      RELEASE_VERSION: ${{ needs.set-version.outputs.releaseVersion }}
-    steps:
-
       - name: Import Secrets
         uses: hashicorp/vault-action@v3
         with:
@@ -167,96 +48,81 @@ jobs:
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
             ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
 
-      - uses: actions/checkout@master
+      - name: Setup Node.js environment
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
+        uses: actions/setup-node@v3
         with:
-          ref: ${{ env.RELEASE_VERSION }}
+          node-version: '22'
+
+      - name: Setup Java
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' }}
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Prepare multi server settings file
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' }}
+        uses: danubetech/github-action-prepare-maven-settings-xml@master
+        with:
+          server_ids: danubetech-maven-releases,danubetech-maven-internal
+
+      - name: Validate pom.xml
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' }}
+        run: |
+          echo "$SETTINGS_FILE" > ./multi-server-template.xml
+          envsubst < ./multi-server-template.xml > ./settings.xml
+          mvn validate -P ci --settings ./settings.xml
+
+      - name: Increment Maven Version
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' }}
+        id: increment-version
+        run: |
+          RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | awk -F. -v OFS=. '{$NF+=1; print}')
+          mvn versions:set -DnewVersion=$RELEASE_VERSION
+          mvn versions:commit
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+            git add pom.xml
+          git commit -m "[skip ci] Bump version to $RELEASE_VERSION"
+
+      - name: Increment Node Version
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
+        id: increment-version
+        run: |
+          RELEASE_VERSION=$(npm version patch --no-git-tag-version)
+          echo "RELEASE_VERSION=${RELEASE_VERSION//v}" >> $GITHUB_ENV
+          git add package.json package-lock.json
+          git commit -m "[skip ci] Bump version $RELEASE_VERSION"
 
       - name: Set SHORT_SHA env variable
         id: short_sha
         run: echo "::set-output name=SHORT_SHA::$(git rev-parse --short HEAD)"
 
       - name: Build image
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' }}
         run: |
           docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
           --build-arg DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }} \
           --build-arg DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
 
-      - name: Login user to repo
-        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
-
-      - name: Push image
-        run: docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
-
-      - name: Slack notification
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          fields: repo,commit,action,eventName,ref,workflow
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Remove release tag
-        if: failure()
+      - name: Build image
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
         run: |
-          git tag -d "${{ env.RELEASE_VERSION }}"
-          git push --delete origin "${{ env.RELEASE_VERSION }}"
+          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
 
-  update-package-json:
-    needs: [ publish-image, set-version ]
-    if: ${{ needs.set-framework.outputs.framework == 'node' }}
-    runs-on: ubuntu-latest
-    env:
-      RELEASE_VERSION: ${{ needs.set-version.outputs.releaseVersion }}
-    steps:
-      - name: Setup Git
+      - name: Login user to repo and push image
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+          docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
 
-      - name: Update package.json version
+      - name: Cleanup Version Increment and Tag (if build fails)
+        if: failure() && steps.increment-version.outcome == 'success'
         run: |
-          # Use jq to update the version field
-          jq '.version = "${{ env.RELEASE_VERSION }}"' package.json > temp.json
-          mv temp.json package.json
-
-      - name: Commit and push changes
-        run: |
-          git add package.json
-          git commit -m "[skip ci] Update version to ${{ env.RELEASE_VERSION }}"
-          git push
-
-  increase-to-next-snapshop:
-    needs: [ publish-image, set-version ]
-    if: ${{ needs.set-framework.outputs.framework == 'maven' }}
-    runs-on: ubuntu-latest
-    env:
-      DEV_VERSION: ${{ needs.set-version.outputs.devVersion }}
-    steps:
-      - name: Import Secrets
-        uses: hashicorp/vault-action@v3
-        with:
-          url: ${{ secrets.VAULT_ADDR }}
-          token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
-          caCertificate: ${{ secrets.VAULTCA }}
-          secrets: |
-            ci/data/gh-workflows/deployment-status slack-webhook-url | SLACK_WEBHOOK_URL
-
-      - uses: actions/checkout@master
-
-      - name: Set user data
-        run: |
-          git config --global user.email "admin@danubetech.com"
-          git config --global user.name "Github Workflow"
-
-      - name: Set next development version to pom
-        run: mvn build-helper:parse-version versions:set -DnewVersion=${{ env.DEV_VERSION }} versions:commit
-
-      - name: Commit and push pom to repo
-        run: |
-          git add pom.xml
-          git commit -m "[ci] Set ${{ env.DEV_VERSION }} as development version"
-          git push
+          git reset --hard HEAD~1
+          if git tag | grep -q "v${{ env.VERSION }}"; then
+            git tag -d "v${{ env.VERSION }}"
+            git push --delete origin "v${{ env.VERSION }}"
+          fi
 
       - name: Slack notification
         if: failure()
