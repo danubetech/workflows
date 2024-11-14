@@ -26,7 +26,6 @@ on:
         required: true
 
 jobs:
-
   build-context:
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +34,8 @@ jobs:
   build-and-release:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
 
     steps:
       - name: Import Secrets
@@ -51,6 +52,8 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Configure Git
         run: |
@@ -99,10 +102,41 @@ jobs:
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
         id: increment-version-node
         run: |
-          RELEASE_VERSION=$(npm version patch --no-git-tag-version)
-          echo "RELEASE_VERSION=${RELEASE_VERSION//v}" >> $GITHUB_ENV
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          
+          # Split version into major, minor, and patch
+          IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+          
+          # Increment version based on release type
+          case "${{ github.event.inputs.release_type }}" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+            *)
+              echo "Invalid release type: ${{ github.event.inputs.release_type }}"
+              exit 1
+              ;;
+          esac
+          
+          # Construct new version
+          NEW_VERSION="${major}.${minor}.${patch}"
+          
+          # Update package.json
+          npm version $NEW_VERSION --no-git-tag-version
+          
+          echo "RELEASE_VERSION=$NEW_VERSION" >> $GITHUB_ENV
           git add package.json package-lock.json
-          git commit -m "[skip ci] Bump version $RELEASE_VERSION"
+          git commit -m "[skip ci] Bump version $NEW_VERSION"
           git push origin HEAD:${{ github.ref }}
 
       - name: Set SHORT_SHA env variable
@@ -119,7 +153,7 @@ jobs:
       - name: Build image
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
         run: |
-          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
+          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
 
       - name: Login user to repo and push image
         run: |
@@ -129,16 +163,16 @@ jobs:
       - name: Create and Push Git Tag
         if: success() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success')
         run: |
-          git tag -a "v${{ env.RELEASE_VERSION }}" -m "Release version v${{ env.RELEASE_VERSION }}"
-          git push origin "v${{ env.RELEASE_VERSION }}"
+          git tag -a "${{ env.RELEASE_VERSION }}" -m "Release version ${{ env.RELEASE_VERSION }}"
+          git push origin "${{ env.RELEASE_VERSION }}"
 
       - name: Cleanup Version Increment and Tag (if build fails)
         if: failure() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success')
         run: |
           git reset --hard HEAD~1 || true
-          if git tag | grep -q "v${{ env.RELEASE_VERSION }}"; then
-            git tag -d "v${{ env.RELEASE_VERSION }}" || true
-            git push --delete origin "v${{ env.RELEASE_VERSION }}" || true
+          if git tag | grep -q "${{ env.RELEASE_VERSION }}"; then
+            git tag -d "${{ env.RELEASE_VERSION }}" || true
+            git push --delete origin "${{ env.RELEASE_VERSION }}" || true
           fi
 
       - name: Slack notification
