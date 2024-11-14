@@ -99,8 +99,8 @@ jobs:
           # Increment version based on release type
           case "${{ github.event.inputs.release_type }}" in
             major)
-              RELEASE_VERSION="${major}.${minor}.0"
               major=$((major + 1))
+              RELEASE_VERSION="${major}.0.0"
               NEXT_VERSION="${major}.0-SNAPSHOT"
               ;;
             minor)
@@ -109,7 +109,7 @@ jobs:
               NEXT_VERSION="${major}.${minor}-SNAPSHOT"
               ;;
             patch)
-              RELEASE_VERSION="${major}.${minor}.0"
+              RELEASE_VERSION="${major}.${minor}.1"
               NEXT_VERSION="${major}.${minor}-SNAPSHOT"
               ;;
             *)
