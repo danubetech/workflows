@@ -34,6 +34,7 @@ jobs:
 
   build-and-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Import Secrets
@@ -50,6 +51,11 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Setup Node.js environment
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
@@ -85,8 +91,9 @@ jobs:
           mvn versions:set -DnewVersion=$RELEASE_VERSION
           mvn versions:commit
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
-            git add pom.xml
+          git add pom.xml
           git commit -m "[skip ci] Bump version to $RELEASE_VERSION"
+          git push origin HEAD:${{ github.ref }}
 
       - name: Increment Node Version
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
@@ -96,10 +103,11 @@ jobs:
           echo "RELEASE_VERSION=${RELEASE_VERSION//v}" >> $GITHUB_ENV
           git add package.json package-lock.json
           git commit -m "[skip ci] Bump version $RELEASE_VERSION"
+          git push origin HEAD:${{ github.ref }}
 
       - name: Set SHORT_SHA env variable
         id: short_sha
-        run: echo "::set-output name=SHORT_SHA::$(git rev-parse --short HEAD)"
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Build image
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' }}
@@ -127,10 +135,10 @@ jobs:
       - name: Cleanup Version Increment and Tag (if build fails)
         if: failure() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success')
         run: |
-          git reset --hard HEAD~1
+          git reset --hard HEAD~1 || true
           if git tag | grep -q "v${{ env.RELEASE_VERSION }}"; then
-            git tag -d "v${{ env.RELEASE_VERSION }}"
-            git push --delete origin "v${{ env.RELEASE_VERSION }}"
+            git tag -d "v${{ env.RELEASE_VERSION }}" || true
+            git push --delete origin "v${{ env.RELEASE_VERSION }}" || true
           fi
 
       - name: Slack notification
