@@ -93,22 +93,24 @@ jobs:
           # Get current version without -SNAPSHOT
           CURRENT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
           
-          # Split version into major, minor and patch (adding .0 if patch is missing)
-          IFS='.' read -r major minor patch <<< "$CURRENT_VERSION.0"
+          # Split version into major and minor (we know it's in format X.Y)
+          IFS='.' read -r major minor <<< "$CURRENT_VERSION"
           
           # Increment version based on release type
           case "${{ github.event.inputs.release_type }}" in
             major)
+              RELEASE_VERSION="${major}.${minor}.0"
               major=$((major + 1))
-              minor=0
-              patch=0
+              NEXT_VERSION="${major}.0-SNAPSHOT"
               ;;
             minor)
+              RELEASE_VERSION="${major}.${minor}.0"
               minor=$((minor + 1))
-              patch=0
+              NEXT_VERSION="${major}.${minor}-SNAPSHOT"
               ;;
             patch)
-              patch=$((patch + 1))
+              RELEASE_VERSION="${major}.${minor}.0"
+              NEXT_VERSION="${major}.${minor}-SNAPSHOT"
               ;;
             *)
               echo "Invalid release type: ${{ github.event.inputs.release_type }}"
@@ -116,14 +118,19 @@ jobs:
               ;;
           esac
           
-          # Construct release version in 3-digit format
-          RELEASE_VERSION="${major}.${minor}.${patch}"
-          
+          # Set release version
           mvn versions:set -DnewVersion=$RELEASE_VERSION
           mvn versions:commit
+          
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          
+          # After creating release version, set the next development version
+          mvn versions:set -DnewVersion=$NEXT_VERSION
+          mvn versions:commit
           git add pom.xml
-          git commit -m "[skip ci] Bump version to $RELEASE_VERSION"
+          git commit -m "[skip ci] Prepare for next development iteration $NEXT_VERSION"
+          
+          # Push the commit
           git push origin HEAD:${{ github.ref }}
 
       - name: Increment Node Version
