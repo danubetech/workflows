@@ -48,6 +48,9 @@ jobs:
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
             ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
 
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Setup Node.js environment
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
         uses: actions/setup-node@v3
