@@ -127,11 +127,15 @@ jobs:
           # After creating release version, set the next development version
           mvn versions:set -DnewVersion=$NEXT_VERSION
           mvn versions:commit
-          git add pom.xml
-          git commit -m "[skip ci] Prepare for next development iteration $NEXT_VERSION"
           
-          # Push the commit
-          git push origin HEAD:${{ github.ref }}
+          # Only commit if there are changes to the pom.xml
+          if git diff --quiet pom.xml; then
+            echo "No changes to pom.xml, skipping commit"
+          else
+            git add pom.xml
+            git commit -m "[skip ci] Prepare for next development iteration $NEXT_VERSION"
+            git push origin HEAD:${{ github.ref }}
+          fi
 
       - name: Increment Node Version
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
