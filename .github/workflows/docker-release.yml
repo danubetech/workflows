@@ -76,7 +76,7 @@ jobs:
 
       - name: Increment Maven Version
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' }}
-        id: increment-version
+        id: increment-version-maven
         run: |
           RELEASE_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | awk -F. -v OFS=. '{$NF+=1; print}')
           mvn versions:set -DnewVersion=$RELEASE_VERSION
@@ -87,7 +87,7 @@ jobs:
 
       - name: Increment Node Version
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
-        id: increment-version
+        id: increment-version-node
         run: |
           RELEASE_VERSION=$(npm version patch --no-git-tag-version)
           echo "RELEASE_VERSION=${RELEASE_VERSION//v}" >> $GITHUB_ENV
@@ -115,13 +115,19 @@ jobs:
           echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
           docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
 
+      - name: Create and Push Git Tag
+        if: success() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success')
+        run: |
+          git tag -a "v${{ env.RELEASE_VERSION }}" -m "Release version v${{ env.RELEASE_VERSION }}"
+          git push origin "v${{ env.RELEASE_VERSION }}"
+
       - name: Cleanup Version Increment and Tag (if build fails)
-        if: failure() && steps.increment-version.outcome == 'success'
+        if: failure() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success')
         run: |
           git reset --hard HEAD~1
-          if git tag | grep -q "v${{ env.VERSION }}"; then
-            git tag -d "v${{ env.VERSION }}"
-            git push --delete origin "v${{ env.VERSION }}"
+          if git tag | grep -q "v${{ env.RELEASE_VERSION }}"; then
+            git tag -d "v${{ env.RELEASE_VERSION }}"
+            git push --delete origin "v${{ env.RELEASE_VERSION }}"
           fi
 
       - name: Slack notification
