@@ -96,27 +96,35 @@ jobs:
           # Split version into major and minor (we know it's in format X.Y)
           IFS='.' read -r major minor <<< "$CURRENT_VERSION"
           
-          # Increment version based on release type
-          case "${{ github.event.inputs.release_type }}" in
-            major)
-              major=$((major + 1))
-              RELEASE_VERSION="${major}.0.0"
-              NEXT_VERSION="${major}.0-SNAPSHOT"
-              ;;
-            minor)
-              RELEASE_VERSION="${major}.${minor}.0"
-              minor=$((minor + 1))
-              NEXT_VERSION="${major}.${minor}-SNAPSHOT"
-              ;;
-            patch)
+          # For patch releases, we need to use the last released version
+          if [[ "${{ github.event.inputs.release_type }}" == "patch" ]]; then
+            # Get the last version tag
+            LAST_VERSION=$(git tag -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
+            if [[ -n "$LAST_VERSION" ]]; then
+              IFS='.' read -r major minor patch <<< "$LAST_VERSION"
+              RELEASE_VERSION="${major}.${minor}.$((patch + 1))"
+            else
               RELEASE_VERSION="${major}.${minor}.1"
-              NEXT_VERSION="${major}.${minor}-SNAPSHOT"
-              ;;
-            *)
-              echo "Invalid release type: ${{ github.event.inputs.release_type }}"
-              exit 1
-              ;;
-          esac
+            fi
+            NEXT_VERSION="${major}.${minor}-SNAPSHOT"
+          else
+            case "${{ github.event.inputs.release_type }}" in
+              major)
+                major=$((major + 1))
+                RELEASE_VERSION="${major}.0.0"
+                NEXT_VERSION="${major}.0-SNAPSHOT"
+                ;;
+              minor)
+                RELEASE_VERSION="${major}.${minor}.0"
+                minor=$((minor + 1))
+                NEXT_VERSION="${major}.${minor}-SNAPSHOT"
+                ;;
+              *)
+                echo "Invalid release type: ${{ github.event.inputs.release_type }}"
+                exit 1
+                ;;
+            esac
+          fi
           
           # Set release version
           mvn versions:set -DnewVersion=$RELEASE_VERSION
