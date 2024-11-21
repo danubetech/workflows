@@ -186,6 +186,41 @@ jobs:
           git commit -m "[skip ci] Bump version $NEW_VERSION"
           git push origin HEAD:${{ github.ref }}
 
+      - name: Increment Git Version
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'git' }}
+        id: increment-version-git
+        run: |
+          # Get the last version tag
+          LAST_VERSION=$(git tag -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
+          
+          if [[ -z "$LAST_VERSION" ]]; then
+            echo "No version tags found. Starting with 0.1.0"
+            LAST_VERSION="0.1.0"
+          fi
+          
+          # Split version into major, minor and patch
+          IFS='.' read -r major minor patch <<< "$LAST_VERSION"
+          
+          # Increment version based on release type
+          case "${{ github.event.inputs.release_type }}" in
+            major)
+              major=$((major + 1))
+              RELEASE_VERSION="${major}.0.0"
+              ;;
+            minor)
+              RELEASE_VERSION="${major}.$((minor + 1)).0"
+              ;;
+            patch)
+              RELEASE_VERSION="${major}.${minor}.$((patch + 1))"
+              ;;
+            *)
+              echo "Invalid release type: ${{ github.event.inputs.release_type }}"
+              exit 1
+              ;;
+          esac
+          
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+
       - name: Set SHORT_SHA env variable
         id: short_sha
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
