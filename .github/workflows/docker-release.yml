@@ -38,7 +38,8 @@ jobs:
       contents: write
 
     steps:
-      - name: Import Secrets
+      - name: Import Secrets maven
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' }}
         uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
@@ -49,6 +50,17 @@ jobs:
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD ;
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
             ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
+
+      - name: Import Secrets maven
+        if: ${{ inputs.GLOBAL_FRAMEWORK != 'maven' }}
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
+          caCertificate: ${{ secrets.VAULTCA }}
+          secrets: |
+            ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
+            ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD
 
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -186,19 +198,54 @@ jobs:
           git commit -m "[skip ci] Bump version $NEW_VERSION"
           git push origin HEAD:${{ github.ref }}
 
+      - name: Increment Git Version
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'git' }}
+        id: increment-version-git
+        run: |
+          # Get the last version tag
+          LAST_VERSION=$(git tag -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
+          
+          if [[ -z "$LAST_VERSION" ]]; then
+            echo "No version tags found. Starting with 0.1.0"
+            LAST_VERSION="0.1.0"
+          fi
+          
+          # Split version into major, minor and patch
+          IFS='.' read -r major minor patch <<< "$LAST_VERSION"
+          
+          # Increment version based on release type
+          case "${{ github.event.inputs.release_type }}" in
+            major)
+              major=$((major + 1))
+              RELEASE_VERSION="${major}.0.0"
+              ;;
+            minor)
+              RELEASE_VERSION="${major}.$((minor + 1)).0"
+              ;;
+            patch)
+              RELEASE_VERSION="${major}.${minor}.$((patch + 1))"
+              ;;
+            *)
+              echo "Invalid release type: ${{ github.event.inputs.release_type }}"
+              exit 1
+              ;;
+          esac
+          
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+
       - name: Set SHORT_SHA env variable
         id: short_sha
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build image
+      - name: Build image maven
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' }}
         run: |
           docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
           --build-arg DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }} \
           --build-arg DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
 
-      - name: Build image
-        if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
+      - name: Build image generic
+        if: ${{ inputs.GLOBAL_FRAMEWORK != 'maven' }}
         run: |
           docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
 
@@ -208,13 +255,13 @@ jobs:
           docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
 
       - name: Create and Push Git Tag
-        if: success() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success')
+        if: success() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success' || steps.increment-version-git.outcome == 'success')
         run: |
           git tag -a "${{ env.RELEASE_VERSION }}" -m "Release version ${{ env.RELEASE_VERSION }}"
           git push origin "${{ env.RELEASE_VERSION }}"
 
       - name: Cleanup Version Increment and Tag (if build fails)
-        if: failure() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success')
+        if: failure() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success' || steps.increment-version-git.outcome == 'success')
         run: |
           git reset --hard HEAD~1 || true
           if git tag | grep -q "${{ env.RELEASE_VERSION }}"; then
