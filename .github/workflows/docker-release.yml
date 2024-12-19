@@ -263,13 +263,13 @@ jobs:
           docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
 
       - name: Create and Push Git Tag
-        if: success() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success' || steps.increment-version-git.outcome == 'success' || steps.get-version-triggered.outcome == 'success')
+        if: success() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success' || steps.increment-version-git.outcome == 'success')
         run: |
           git tag -a "${{ env.RELEASE_VERSION }}" -m "Release version ${{ env.RELEASE_VERSION }}"
           git push origin "${{ env.RELEASE_VERSION }}"
 
       - name: Cleanup Version Increment and Tag (if build fails)
-        if: failure() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success' || steps.increment-version-git.outcome == 'success' || steps.get-version-triggered.outcome == 'success')
+        if: failure() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success' || steps.increment-version-git.outcome == 'success')
         run: |
           git reset --hard HEAD~1 || true
           if git tag | grep -q "${{ env.RELEASE_VERSION }}"; then
