@@ -12,6 +12,11 @@ on:
         description: 'Type of release: major, minor, or patch'
         required: false
         default: 'minor'
+      JAVA_VERSION:
+        type: string
+        description: 'Java version to use'
+        required: false
+        default: '21'
     secrets:
       VAULT_ADDR:
         required: true
@@ -37,7 +42,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          java-version: '21'
+          java-version: ${{ inputs.JAVA_VERSION }}
           distribution: 'temurin'
 
       - name: Configure Git
@@ -66,6 +71,18 @@ jobs:
               </server>
             </servers>
           </settings>" > ~/.m2/settings.xml
+
+      - name: Check for SNAPSHOT dependencies
+        run: |
+          # List all dependencies and check for SNAPSHOTs
+          SNAPSHOT_DEPS=$(mvn dependency:list -DexcludeTransitive=true | grep -B1 "SNAPSHOT")
+          if [ ! -z "$SNAPSHOT_DEPS" ]; then
+            echo "ERROR: SNAPSHOT dependencies found:"
+            echo "$SNAPSHOT_DEPS"
+            echo "Please update to release versions before performing a release."
+            exit 1
+          fi
+          echo "No SNAPSHOT dependencies found. Proceeding with release..."
 
       - name: Calculate versions
         run: |
