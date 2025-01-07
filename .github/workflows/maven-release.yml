@@ -3,11 +3,11 @@ name: Maven Release
 on:
   workflow_call:
     inputs:
-      MAVEN-REPO-SERVER-ID:
+      MAVEN_REPO_SERVER_ID:
         type: string
         description: 'Maven repository server ID'
         required: true
-      RELEASE-TYPE:
+      RELEASE_TYPE:
         type: string
         description: 'Type of release: major, minor, or patch'
         required: false
@@ -60,7 +60,7 @@ jobs:
           echo "<settings>
             <servers>
               <server>
-                <id>${{ inputs.maven-repo-server-id }}</id>
+                <id>${{ inputs.MAVEN_REPO_SERVER_ID }}</id>
                 <username>${{ env.MAVEN_USERNAME }}</username>
                 <password>${{ env.MAVEN_PASSWORD }}</password>
               </server>
@@ -80,8 +80,8 @@ jobs:
           # Remove -SNAPSHOT and append .0 for release version (0.1-SNAPSHOT -> 0.1.0)
           RELEASE_VERSION=${CURRENT_VERSION%-SNAPSHOT}.0
           
-          # Calculate next development version based on release-type
-          case "${{ inputs.release-type }}" in
+          # Calculate next development version based on RELEASE_TYPE
+          case "${{ inputs.RELEASE_TYPE }}" in
             "major")
               # Increment major version (0.1.0 -> 1.0-SNAPSHOT)
               NEXT_MAJOR=$((MAJOR_VERSION + 1))
@@ -97,7 +97,7 @@ jobs:
               DEV_VERSION="$MAJOR_VERSION.$MINOR_VERSION.1-SNAPSHOT"
               ;;
             *)
-              echo "Invalid release type: ${{ inputs.release-type }}. Must be major, minor, or patch"
+              echo "Invalid release type: ${{ inputs.RELEASE_TYPE }}. Must be major, minor, or patch"
               exit 1
               ;;
           esac
@@ -107,7 +107,7 @@ jobs:
           echo "DEV_VERSION=$DEV_VERSION" >> $GITHUB_ENV
           
           echo "Current version: $CURRENT_VERSION"
-          echo "Release type: ${{ inputs.release-type }}"
+          echo "Release type: ${{ inputs.RELEASE_TYPE }}"
           echo "Release version: $RELEASE_VERSION"
           echo "Next development version: $DEV_VERSION"
 
