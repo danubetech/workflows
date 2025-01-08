@@ -44,6 +44,7 @@ jobs:
         with:
           java-version: ${{ inputs.JAVA_VERSION }}
           distribution: 'temurin'
+          cache: false
 
       - name: Configure Git
         run: |
