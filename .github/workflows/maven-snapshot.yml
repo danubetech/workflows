@@ -12,6 +12,15 @@ on:
         required: true
         type: string
         description: 'Server ID in Maven settings.xml'
+    secrets:
+      VAULT_ADDR:
+        required: true
+      CI_SECRET_READER_PERIODIC_TOKEN:
+        required: true
+      VAULTCA:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: true
 
 jobs:
   deploy:
