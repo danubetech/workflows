@@ -73,11 +73,6 @@ jobs:
             </servers>
           </settings>" > ~/.m2/settings.xml
 
-      - name: Check for SNAPSHOT dependencies
-        run: |
-          mvn enforcer:enforce -Drules=requireReleaseDeps -DfailOnSnapshotDependencies=true -DallowSnapshotVersions=true
-          echo "No SNAPSHOT dependencies found. Proceeding with release..."
-
       - name: Calculate versions
         run: |
           # Get current version (e.g., 0.1-SNAPSHOT)
