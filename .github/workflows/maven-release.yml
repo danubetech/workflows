@@ -76,7 +76,8 @@ jobs:
       - name: Check for SNAPSHOT dependencies
         run: |
           # List all dependencies and check for SNAPSHOTs
-          SNAPSHOT_DEPS=$(mvn dependency:list -DexcludeTransitive=true | grep -B1 "SNAPSHOT")
+          # Using dependency:tree with specific includes to only check compile and runtime dependencies
+          SNAPSHOT_DEPS=$(mvn dependency:tree -Dincludes=*:*:*:*:compile,*:*:*:*:runtime | grep -v "$(mvn help:evaluate -Dexpression=project.groupId -q -DforceStdout):$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout):" | grep "SNAPSHOT")
           if [ ! -z "$SNAPSHOT_DEPS" ]; then
             echo "ERROR: SNAPSHOT dependencies found:"
             echo "$SNAPSHOT_DEPS"
