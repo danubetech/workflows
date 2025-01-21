@@ -26,6 +26,8 @@ on:
         required: true
       SLACK_WEBHOOK_URL:
         required: true
+      DEPLOY_KEY:
+        required: false
 
 jobs:
   release:
@@ -34,7 +36,21 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout code
+      - name: Install SSH key
+        if: secrets.DEPLOY_KEY != ''
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Checkout code (Private repo)
+        if: secrets.DEPLOY_KEY != ''
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Checkout code (Public repo)
+        if: secrets.DEPLOY_KEY == ''
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
