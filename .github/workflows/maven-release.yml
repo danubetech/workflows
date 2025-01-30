@@ -62,17 +62,36 @@ jobs:
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
             ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
 
-      - name: Setup Maven settings.xml
+      - name: Configure Maven Settings
         run: |
-          echo "<settings>
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <settings>
             <servers>
+          EOF
+
+          # Parse comma-separated server IDs and create an entry for each
+          echo "${{ inputs.MAVEN_REPO_SERVER_ID }}" | tr ',' '\n' | while read -r server_id; do
+            # Skip empty lines
+            [ -z "$server_id" ] && continue
+
+            # Trim whitespace
+            server_id=$(echo "$server_id" | xargs)
+
+            cat >> ~/.m2/settings.xml << EOF
               <server>
-                <id>${{ inputs.MAVEN_REPO_SERVER_ID }}</id>
+                <id>$server_id</id>
                 <username>${{ env.MAVEN_USERNAME }}</username>
                 <password>${{ env.MAVEN_PASSWORD }}</password>
               </server>
+          EOF
+          done
+
+          # Close the XML structure
+          cat >> ~/.m2/settings.xml << 'EOF'
             </servers>
-          </settings>" > ~/.m2/settings.xml
+          </settings>
+          EOF
 
       - name: Calculate versions
         run: |

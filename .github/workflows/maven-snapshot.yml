@@ -83,15 +83,6 @@ jobs:
           </settings>
           EOF
 
-      - name: Debug Maven Settings
-        run: |
-          echo "Maven settings.xml content (with masked credentials):"
-          sed -n '
-            s/<username>.*<\/username>/<username>****<\/username>/g
-            s/<password>.*<\/password>/<password>****<\/password>/g
-            p
-          ' ~/.m2/settings.xml
-
       - name: Build and Deploy with Maven
         run: mvn --batch-mode -U -e deploy
 
