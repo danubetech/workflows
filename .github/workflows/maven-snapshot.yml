@@ -25,9 +25,15 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -62,7 +68,7 @@ jobs:
           EOF
 
       - name: Build and Deploy with Maven
-        run: mvn --batch-mode -U deploy
+        run: mvn --batch-mode -U -e deploy
 
       - name: Slack notification
         if: failure()
