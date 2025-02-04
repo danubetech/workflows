@@ -17,6 +17,11 @@ on:
         description: 'Java version to use'
         required: false
         default: '21'
+      USE_DEPLOY_KEY:
+        type: boolean
+        description: 'Whether to use deploy key for repository access'
+        required: false
+        default: false
     secrets:
       VAULT_ADDR:
         required: true
@@ -26,6 +31,8 @@ on:
         required: true
       SLACK_WEBHOOK_URL:
         required: true
+      DEPLOY_KEY:
+        required: false
 
 jobs:
   release:
@@ -34,11 +41,24 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout code
+      - name: Install SSH key
+        if: ${{ inputs.USE_DEPLOY_KEY }}
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Checkout code (Private repo)
+        if: ${{ inputs.USE_DEPLOY_KEY }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Checkout code (Public repo)
+        if: ${{ !inputs.USE_DEPLOY_KEY }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v4
