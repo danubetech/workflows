@@ -92,27 +92,26 @@ jobs:
           cat > ~/.m2/settings.xml << 'EOF'
           <settings>
             <servers>
-          EOF
-
-          # Parse comma-separated server IDs and create an entry for each
-          echo "${{ inputs.MAVEN_REPO_SERVER_ID }}" | tr ',' '\n' | while read -r server_id; do
-            # Skip empty lines
-            [ -z "$server_id" ] && continue
-
-            # Trim whitespace
-            server_id=$(echo "$server_id" | xargs)
-
-            cat >> ~/.m2/settings.xml << EOF
               <server>
-                <id>$server_id</id>
+                <id>danubetech-maven-snapshots</id>
                 <username>${{ env.MAVEN_USERNAME }}</username>
                 <password>${{ env.MAVEN_PASSWORD }}</password>
               </server>
-          EOF
-          done
-
-          # Close the XML structure
-          cat >> ~/.m2/settings.xml << 'EOF'
+              <server>
+                <id>danubetech-maven-releases</id>
+                <username>${{ env.MAVEN_USERNAME }}</username>
+                <password>${{ env.MAVEN_PASSWORD }}</password>
+              </server>
+              <server>
+                <id>danubetech-maven-internal</id>
+                <username>${{ env.MAVEN_USERNAME }}</username>
+                <password>${{ env.MAVEN_PASSWORD }}</password>
+              </server>
+              <server>
+                <id>danubetech-maven-internal-releases</id>
+                <username>${{ env.MAVEN_USERNAME }}</username>
+                <password>${{ env.MAVEN_PASSWORD }}</password>
+              </server>
             </servers>
           </settings>
           EOF
