@@ -6,7 +6,7 @@ on:
       MAVEN_REPO_SERVER_ID:
         type: string
         description: 'Maven repository server ID'
-        required: true
+        required: false
       RELEASE_TYPE:
         type: string
         description: 'Type of release: major, minor, or patch'

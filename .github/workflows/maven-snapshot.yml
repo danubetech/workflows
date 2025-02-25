@@ -9,7 +9,7 @@ on:
         default: '21'
         description: 'Java version to use for build'
       MAVEN_REPO_SERVER_ID:
-        required: true
+        required: false
         type: string
         description: 'Server ID in Maven settings.xml'
     secrets:
