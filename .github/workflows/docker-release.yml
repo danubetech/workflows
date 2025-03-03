@@ -288,7 +288,7 @@ jobs:
           --build-arg DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
 
       - name: Build image generic
-        if: ${{ inputs.GLOBAL_FRAMEWORK != 'maven' && inputs.GLOBAL_FRAMEWORK != 'triggered' }}
+        if: ${{ inputs.GLOBAL_FRAMEWORK != 'maven' && inputs.GLOBAL_FRAMEWORK != 'triggered' && inputs.GLOBAL_FRAMEWORK != 'did-science' }}
         run: |
           docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
 
