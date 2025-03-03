@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Import Secrets maven
-        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' || inputs.GLOBAL_FRAMEWORK == 'git' }}
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' || inputs.GLOBAL_FRAMEWORK == 'did-science' }}
         uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
@@ -86,7 +86,7 @@ jobs:
           java-version: '21'
 
       - name: Configure Maven Settings
-        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' ||  inputs.GLOBAL_FRAMEWORK == 'git' }}
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' ||  inputs.GLOBAL_FRAMEWORK == 'did-science' }}
         run: |
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml << 'EOF'
@@ -242,7 +242,7 @@ jobs:
           git push origin HEAD:${{ github.ref }}
 
       - name: Increment Git Version
-        if: ${{ inputs.GLOBAL_FRAMEWORK == 'git' }}
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'git' || inputs.GLOBAL_FRAMEWORK == 'did-science' }}
         id: increment-version-git
         run: |
           # Get the last version tag
@@ -281,7 +281,7 @@ jobs:
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Build image maven
-        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' }}
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' || inputs.GLOBAL_FRAMEWORK == 'did-science' }}
         run: |
           docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
           --build-arg DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }} \
