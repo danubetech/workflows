@@ -85,11 +85,46 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Prepare multi server settings file
-        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' }}
-        uses: danubetech/github-action-prepare-maven-settings-xml@master
-        with:
-          server_ids: danubetech-maven-releases,danubetech-maven-internal
+      - name: Configure Maven Settings
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' ||  inputs.GLOBAL_FRAMEWORK == 'git' }}
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <settings>
+            <servers>
+              <server>
+                <id>danubetech-maven-snapshots</id>
+                <username>${{ env.MAVEN_USERNAME }}</username>
+                <password>${{ env.MAVEN_PASSWORD }}</password>
+              </server>
+              <server>
+                <id>danubetech-maven-releases</id>
+                <username>${{ env.MAVEN_USERNAME }}</username>
+                <password>${{ env.MAVEN_PASSWORD }}</password>
+              </server>
+              <server>
+                <id>danubetech-maven-internal</id>
+                <username>${{ env.MAVEN_USERNAME }}</username>
+                <password>${{ env.MAVEN_PASSWORD }}</password>
+              </server>
+              <server>
+                <id>danubetech-maven-internal-releases</id>
+                <username>${{ env.MAVEN_USERNAME }}</username>
+                <password>${{ env.MAVEN_PASSWORD }}</password>
+              </server>
+              <server>
+                <id>danubetech-maven-internal-snapshots</id>
+                <username>${{ env.MAVEN_USERNAME }}</username>
+                <password>${{ env.MAVEN_PASSWORD }}</password>
+              </server>
+              <server>
+                <id>danubetech-maven-internal-releases</id>
+                <username>${{ env.MAVEN_USERNAME }}</username>
+                <password>${{ env.MAVEN_PASSWORD }}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
 
       - name: Validate pom.xml
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' && inputs.GLOBAL_FRAMEWORK != 'triggered' }}
