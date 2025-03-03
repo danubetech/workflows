@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Import Secrets maven
-        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' }}
+        if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' || inputs.GLOBAL_FRAMEWORK == 'git' }}
         uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
