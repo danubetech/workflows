@@ -129,9 +129,7 @@ jobs:
       - name: Validate pom.xml
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' && inputs.GLOBAL_FRAMEWORK != 'triggered' }}
         run: |
-          echo "$SETTINGS_FILE" > ./multi-server-template.xml
-          envsubst < ./multi-server-template.xml > ./settings.xml
-          mvn validate -P ci --settings ./settings.xml
+          mvn validate -P ci
 
       - name: Get Version for Triggered Build
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'triggered' }}
