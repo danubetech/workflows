@@ -117,11 +117,6 @@ jobs:
                 <username>${{ env.MAVEN_USERNAME }}</username>
                 <password>${{ env.MAVEN_PASSWORD }}</password>
               </server>
-              <server>
-                <id>danubetech-maven-internal-releases</id>
-                <username>${{ env.MAVEN_USERNAME }}</username>
-                <password>${{ env.MAVEN_PASSWORD }}</password>
-              </server>
             </servers>
           </settings>
           EOF
