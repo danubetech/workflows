@@ -37,9 +37,10 @@ jobs:
     outputs:
       version: ${{ steps.read_and_set_version.outputs.version }}
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Fetches the whole repo including tags
+          persist-credentials: false
 
       - name: Read and set version
         id: read_and_set_version
@@ -60,9 +61,10 @@ jobs:
           secrets: |
             ci/data/gh-workflows/deployment-status slack-webhook-url | SLACK_WEBHOOK_URL
 
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_VERSION }}
+          persist-credentials: false
 
       - name: Validate pom.xml
         run: mvn validate -P ci
@@ -92,9 +94,10 @@ jobs:
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD
 
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_VERSION }}
+          persist-credentials: false
 
       - name: Set SHORT_SHA env variable
         id: short_sha
