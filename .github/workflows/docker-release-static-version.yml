@@ -78,21 +78,45 @@ jobs:
         with:
           ref: ${{ inputs.GLOBAL_RELEASE_VERSION }}
 
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          version: latest
+
       - name: Set SHORT_SHA env variable
         id: short_sha
-        run: echo "::set-output name=SHORT_SHA::$(git rev-parse --short HEAD)"
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build image
-        run: |
-          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ inputs.GLOBAL_RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
-          --build-arg DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }} \
-          --build-arg DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
+      - name: Docker Metadata
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ inputs.GLOBAL_RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}
 
-      - name: Login user to repo
-        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.GLOBAL_REPO_NAME }}
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
 
-      - name: Push image
-        run: docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ inputs.GLOBAL_RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
+      - name: Docker Build and Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ inputs.PATH_TO_DOCKERFILE }}
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          build-args: |
+            DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }}
+            DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
+          cache-from: type=gha,scope=docker-release-static
+          cache-to: type=gha,scope=docker-release-static,mode=max
+          platforms: linux/amd64
 
       - name: Slack notification
         if: failure()

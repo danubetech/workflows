@@ -46,17 +46,40 @@ jobs:
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
             ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
 
-      - name: Run build image action
-        run: |
-          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}" \
-          --build-arg DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }} \
-          --build-arg DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          version: latest
 
-      - name: Login user to repo
-        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+      - name: Docker Metadata
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}
+          tags: type=raw,value=latest
 
-      - name: Push image
-        run: docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}"
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.GLOBAL_REPO_NAME }}
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Docker Build and Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ inputs.PATH_TO_DOCKERFILE }}
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          build-args: |
+            DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }}
+            DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
+          cache-from: type=gha,scope=docker-latest-trivy
+          cache-to: type=gha,scope=docker-latest-trivy,mode=max
+          platforms: linux/amd64
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
