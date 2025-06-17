@@ -37,7 +37,9 @@ jobs:
     outputs:
       version: ${{ steps.read_and_set_version.outputs.version }}
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Read and set version
         id: read_and_set_version
@@ -51,7 +53,9 @@ jobs:
     env:
       RELEASE_VERSION: ${{ needs.set-version.outputs.version }}
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set user data
         run: |
@@ -94,9 +98,10 @@ jobs:
         with:
           server_ids: danubetech-maven-releases,danubetech-maven-internal
 
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_VERSION }}
+          persist-credentials: false
 
       - name: Validate pom.xml
         run: |
@@ -138,9 +143,10 @@ jobs:
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
             ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
 
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_VERSION }}
+          persist-credentials: false
 
       - name: Set SHORT_SHA env variable
         id: short_sha

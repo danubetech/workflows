@@ -35,7 +35,9 @@ jobs:
   create-tag:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set user data
         run: |
@@ -74,9 +76,10 @@ jobs:
             ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
             ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
 
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.GLOBAL_RELEASE_VERSION }}
+          persist-credentials: false
 
       - name: Set SHORT_SHA env variable
         id: short_sha
