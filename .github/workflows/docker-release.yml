@@ -145,10 +145,10 @@ jobs:
         run: |
           # Get current version without -SNAPSHOT
           CURRENT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
-          
+
           # Split version into major and minor (we know it's in format X.Y)
           IFS='.' read -r major minor <<< "$CURRENT_VERSION"
-          
+
           # For patch releases, we need to use the last released version
           if [[ "${{ github.event.inputs.release_type }}" == "patch" ]]; then
             # Get the last version tag
@@ -178,17 +178,17 @@ jobs:
                 ;;
             esac
           fi
-          
+
           # Set release version
           mvn versions:set -DnewVersion=$RELEASE_VERSION
           mvn versions:commit
-          
+
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
-          
+
           # After creating release version, set the next development version
           mvn versions:set -DnewVersion=$NEXT_VERSION
           mvn versions:commit
-          
+
           # Only commit if there are changes to the pom.xml
           if git diff --quiet pom.xml; then
             echo "No changes to pom.xml, skipping commit"
@@ -204,10 +204,10 @@ jobs:
         run: |
           # Get current version
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          
+
           # Split version into major, minor, and patch
           IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
-          
+
           # Increment version based on release type
           case "${{ github.event.inputs.release_type }}" in
             major)
@@ -227,13 +227,13 @@ jobs:
               exit 1
               ;;
           esac
-          
+
           # Construct new version
           NEW_VERSION="${major}.${minor}.${patch}"
-          
+
           # Update package.json
           npm version $NEW_VERSION --no-git-tag-version
-          
+
           echo "RELEASE_VERSION=$NEW_VERSION" >> $GITHUB_ENV
           git add package.json package-lock.json
           git commit -m "[skip ci] Bump version $NEW_VERSION"
@@ -245,15 +245,15 @@ jobs:
         run: |
           # Get the last version tag
           LAST_VERSION=$(git tag -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
-          
+
           if [[ -z "$LAST_VERSION" ]]; then
             echo "No version tags found. Starting with 0.1.0"
             LAST_VERSION="0.1.0"
           fi
-          
+
           # Split version into major, minor and patch
           IFS='.' read -r major minor patch <<< "$LAST_VERSION"
-          
+
           # Increment version based on release type
           case "${{ github.event.inputs.release_type }}" in
             major)
@@ -271,29 +271,61 @@ jobs:
               exit 1
               ;;
           esac
-          
+
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+          version: latest
 
       - name: Set SHORT_SHA env variable
         id: short_sha
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Build image maven
+      - name: Docker Metadata
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.GLOBAL_REPO_NAME }}
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Docker Build and Push (maven)
+        uses: docker/build-push-action@v6
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'maven' || inputs.GLOBAL_FRAMEWORK == 'triggered' || inputs.GLOBAL_FRAMEWORK == 'did-science' }}
-        run: |
-          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
-          --build-arg DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }} \
-          --build-arg DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
+        with:
+          context: .
+          file: ${{ inputs.PATH_TO_DOCKERFILE }}
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          build-args: |
+            DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }}
+            DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
+          cache-from: type=gha,scope=docker-release-mvn
+          cache-to: type=gha,scope=docker-release-mvn,mode=max
+          platforms: linux/amd64
 
-      - name: Build image generic
+      - name: Docker Build and Push (generic)
+        uses: docker/build-push-action@v6
         if: ${{ inputs.GLOBAL_FRAMEWORK != 'maven' && inputs.GLOBAL_FRAMEWORK != 'triggered' && inputs.GLOBAL_FRAMEWORK != 'did-science' }}
-        run: |
-          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
-
-      - name: Login user to repo and push image
-        run: |
-          echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
-          docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
+        with:
+          context: .
+          file: ${{ inputs.PATH_TO_DOCKERFILE }}
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha,scope=docker-release
+          cache-to: type=gha,scope=docker-release,mode=max
+          platforms: linux/amd64
 
       - name: Create and Push Git Tag
         if: success() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success' || steps.increment-version-git.outcome == 'success')
