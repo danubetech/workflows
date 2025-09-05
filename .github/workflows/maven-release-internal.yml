@@ -36,8 +36,8 @@ jobs:
           token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
           caCertificate: ${{ secrets.VAULTCA }}
           secrets: |
-            ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
-            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD ;
+            ci/data/gh-workflows/maven-danubetech-nexus username | DANUBETECH_MAVEN_INTERNAL_USERNAME ;
+            ci/data/gh-workflows/maven-danubetech-nexus password | DANUBETECH_MAVEN_INTERNAL_PASSWORD
             ci/data/gh-workflows/maven-release-deploy-keys ${{ inputs.PRIVATE_KEY_IDENTIFIER }} | SSH_PRIVATE_KEY
 
       - name: Release to Danubetech Nexus
@@ -45,8 +45,8 @@ jobs:
         with:
           release-branch-name: main
           maven-repo-server-id: ${{ inputs.GLOBAL_MAVEN_REPO_SERVER_ID }}
-          maven-repo-server-username: ${{ env.MAVEN_USERNAME }}
-          maven-repo-server-password: ${{ env.MAVEN_PASSWORD }}
+          maven-repo-server-username: ${{ env.DANUBETECH_MAVEN_INTERNAL_USERNAME }}
+          maven-repo-server-password: ${{ env.DANUBETECH_MAVEN_INTERNAL_PASSWORD }}
           ssh-private-key: ${{ env.SSH_PRIVATE_KEY }}
           version-minor: true
           maven-development-version-number: ${parsedVersion.majorVersion}.${parsedVersion.nextMinorVersion}-SNAPSHOT

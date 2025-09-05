@@ -86,8 +86,8 @@ jobs:
           token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
           caCertificate: ${{ secrets.VAULTCA }}
           secrets: |
-            ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
-            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
+            ci/data/gh-workflows/maven-danubetech-nexus username | DANUBETECH_MAVEN_INTERNAL_USERNAME ;
+            ci/data/gh-workflows/maven-danubetech-nexus password | DANUBETECH_MAVEN_INTERNAL_PASSWORD
 
       - name: Prepare multi server settings file
         uses: danubetech/github-action-prepare-maven-settings-xml@master
@@ -135,8 +135,8 @@ jobs:
           secrets: |
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD ;
-            ci/data/gh-workflows/maven-danubetech-nexus username | MAVEN_USERNAME ;
-            ci/data/gh-workflows/maven-danubetech-nexus password | MAVEN_PASSWORD
+            ci/data/gh-workflows/maven-danubetech-nexus username | DANUBETECH_MAVEN_INTERNAL_USERNAME ;
+            ci/data/gh-workflows/maven-danubetech-nexus password | DANUBETECH_MAVEN_INTERNAL_PASSWORD
 
       - uses: actions/checkout@master
         with:
@@ -149,8 +149,8 @@ jobs:
       - name: Build image
         run: |
           docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
-          --build-arg DANUBETECH_MAVEN_INTERNAL_USERNAME=${{ env.MAVEN_USERNAME }} \
-          --build-arg DANUBETECH_MAVEN_INTERNAL_PASSWORD=${{ env.MAVEN_PASSWORD }}
+          --secret id=DANUBETECH_MAVEN_INTERNAL_USERNAME \
+          --secret id=DANUBETECH_MAVEN_INTERNAL_PASSWORD
 
       - name: Login user to repo
         run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
