@@ -12,6 +12,9 @@ on:
       GLOBAL_IMAGE_NAME:
         required: true
         type: string
+      GLOBAL_IMAGE_NAME_2:
+        required: false
+        type: string
       GLOBAL_FRAMEWORK:
         required: true
         type: string
@@ -289,6 +292,14 @@ jobs:
         if: ${{ inputs.GLOBAL_FRAMEWORK != 'maven' && inputs.GLOBAL_FRAMEWORK != 'triggered' && inputs.GLOBAL_FRAMEWORK != 'did-science' }}
         run: |
           docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
+
+      - name: (Maybe) push image with more names
+        run: |
+          if [ ! -z "${{ inputs.GLOBAL_IMAGE_NAME_2 }}" ]
+          then
+            docker tag "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME_2 }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
+            docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME_2 }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
+          fi
 
       - name: Login user to repo and push image
         run: |
