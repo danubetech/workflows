@@ -12,6 +12,9 @@ on:
       GLOBAL_IMAGE_NAME:
         required: true
         type: string
+      GLOBAL_IMAGE_NAME_2:
+        required: false
+        type: string
     secrets:
       VAULT_ADDR:
         required: true
@@ -67,6 +70,11 @@ jobs:
 
       - name: Push image
         run: docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}"
+
+      - name: (Maybe) push image with more names
+        run: if [ -z ${{ inputs.GLOBAL_IMAGE_NAME_2 }} ]; then \
+          docker tag "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}" "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME_2 }}" && \
+          docker push "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME_2 }}"
 
       - name: Slack notification
         if: failure()
