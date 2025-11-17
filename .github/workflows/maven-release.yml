@@ -31,6 +31,8 @@ on:
         required: true
       DEPLOY_KEY:
         required: false
+      CI_SECRET_READER_PERIODIC_TOKEN:
+        required: false
 
 jobs:
   release:

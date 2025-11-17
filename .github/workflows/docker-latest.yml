@@ -22,6 +22,8 @@ on:
         required: true
       SLACK_WEBHOOK_URL:
         required: true
+      CI_SECRET_READER_PERIODIC_TOKEN:
+        required: false
 
 jobs:
 
