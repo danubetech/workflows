@@ -25,6 +25,8 @@ on:
     secrets:
       VAULT_ADDR:
         required: true
+      VAULTCA:
+        required: true
       SLACK_WEBHOOK_URL:
         required: true
       DEPLOY_KEY:
