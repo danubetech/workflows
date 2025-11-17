@@ -40,7 +40,7 @@ jobs:
 
   publish-image:
     runs-on: ubuntu-latest
-    permission:
+    permissions:
       id-token: write
 
     steps:
