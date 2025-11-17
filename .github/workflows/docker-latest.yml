@@ -50,6 +50,7 @@ jobs:
         uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
+          caCertificate: ${{ secrets.VAULTCA }}
           method: jwt
           role: github-actions
           secrets: |
