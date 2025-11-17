@@ -25,10 +25,6 @@ on:
     secrets:
       VAULT_ADDR:
         required: true
-      CI_SECRET_READER_PERIODIC_TOKEN:
-        required: true
-      VAULTCA:
-        required: true
       SLACK_WEBHOOK_URL:
         required: true
       DEPLOY_KEY:
@@ -38,6 +34,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       contents: write
 
     steps:
@@ -80,8 +77,8 @@ jobs:
         uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
-          token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
-          caCertificate: ${{ secrets.VAULTCA }}
+          method: jwt
+          role: github-actions
           secrets: |
             ci/data/gh-workflows/maven-danubetech-nexus username | DANUBETECH_MAVEN_INTERNAL_USERNAME ;
             ci/data/gh-workflows/maven-danubetech-nexus password | DANUBETECH_MAVEN_INTERNAL_PASSWORD
