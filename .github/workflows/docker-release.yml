@@ -21,12 +21,12 @@ on:
     secrets:
       VAULT_ADDR:
         required: true
-      CI_SECRET_READER_PERIODIC_TOKEN:
-        required: true
       VAULTCA:
         required: true
       SLACK_WEBHOOK_URL:
         required: true
+      CI_SECRET_READER_PERIODIC_TOKEN:
+        required: false
 
 jobs:
   build-context:
@@ -39,6 +39,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - name: Import Secrets maven
@@ -46,8 +47,9 @@ jobs:
         uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
-          token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
           caCertificate: ${{ secrets.VAULTCA }}
+          method: jwt
+          role: github-actions
           secrets: |
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD ;

@@ -18,12 +18,12 @@ on:
     secrets:
       VAULT_ADDR:
         required: true
-      CI_SECRET_READER_PERIODIC_TOKEN:
-        required: true
       VAULTCA:
         required: true
       SLACK_WEBHOOK_URL:
         required: true
+      CI_SECRET_READER_PERIODIC_TOKEN:
+        required: false
 
 jobs:
 
@@ -44,6 +44,10 @@ jobs:
 
   publish-image:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
       - uses: actions/checkout@master
 
@@ -51,8 +55,9 @@ jobs:
         uses: hashicorp/vault-action@v3
         with:
           url: ${{ secrets.VAULT_ADDR }}
-          token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
           caCertificate: ${{ secrets.VAULTCA }}
+          method: jwt
+          role: github-actions
           secrets: |
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} username | DOCKER_USERNAME ;
             ci/data/gh-workflows/${{ inputs.GLOBAL_REPO_NAME }} password | DOCKER_PASSWORD ;
