@@ -182,24 +182,16 @@ jobs:
             esac
           fi
           
-          # Set release version
+          # Set release version and commit it, so the Docker image below is
+          # built from a commit whose pom.xml actually matches RELEASE_VERSION
           mvn versions:set -DnewVersion=$RELEASE_VERSION
           mvn versions:commit
-          
+
           echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
-          
-          # After creating release version, set the next development version
-          mvn versions:set -DnewVersion=$NEXT_VERSION
-          mvn versions:commit
-          
-          # Only commit if there are changes to the pom.xml
-          if git diff --quiet pom.xml; then
-            echo "No changes to pom.xml, skipping commit"
-          else
-            git add pom.xml
-            git commit -m "[skip ci] Prepare for next development iteration $NEXT_VERSION"
-            git push origin HEAD:${{ github.ref }}
-          fi
+          echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_ENV
+
+          git add pom.xml
+          git commit -m "[skip ci] Release $RELEASE_VERSION"
 
       - name: Increment Node Version
         if: ${{ inputs.GLOBAL_FRAMEWORK == 'node' }}
@@ -312,6 +304,24 @@ jobs:
         run: |
           git tag -a "${{ env.RELEASE_VERSION }}" -m "Release version ${{ env.RELEASE_VERSION }}"
           git push origin "${{ env.RELEASE_VERSION }}"
+
+      - name: Push Maven Release Commit
+        if: success() && steps.increment-version-maven.outcome == 'success'
+        run: git push origin HEAD:${{ github.ref }}
+
+      - name: Prepare Next Maven Development Iteration
+        if: success() && steps.increment-version-maven.outcome == 'success'
+        run: |
+          mvn versions:set -DnewVersion=${{ env.NEXT_VERSION }}
+          mvn versions:commit
+
+          if git diff --quiet pom.xml; then
+            echo "No changes to pom.xml, skipping commit"
+          else
+            git add pom.xml
+            git commit -m "[skip ci] Prepare for next development iteration ${{ env.NEXT_VERSION }}"
+            git push origin HEAD:${{ github.ref }}
+          fi
 
       - name: Cleanup Version Increment and Tag (if build fails)
         if: failure() && (steps.increment-version-maven.outcome == 'success' || steps.increment-version-node.outcome == 'success' || steps.increment-version-git.outcome == 'success')
