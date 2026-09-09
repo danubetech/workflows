@@ -49,8 +49,10 @@ jobs:
           token: ${{ secrets.CI_SECRET_READER_PERIODIC_TOKEN }}
           caCertificate: ${{ secrets.VAULTCA }}
           secrets: |
-            ci/data/gh-workflows/maven-danubetech-nexus username | DANUBETECH_MAVEN_INTERNAL_USERNAME ;
-            ci/data/gh-workflows/maven-danubetech-nexus password | DANUBETECH_MAVEN_INTERNAL_PASSWORD
+            ci/data/gh-workflows/maven-danubetech-nexus username | DANUBETECH_MAVEN_NEXUS_USERNAME ;
+            ci/data/gh-workflows/maven-danubetech-nexus password | DANUBETECH_MAVEN_NEXUS_PASSWORD ;
+            ci/data/gh-workflows/maven-danubetech-reposilite username | DANUBETECH_MAVEN_REPOSILITE_USERNAME ;
+            ci/data/gh-workflows/maven-danubetech-reposilite password | DANUBETECH_MAVEN_REPOSILITE_PASSWORD
 
       - name: Configure Maven Settings
         run: |
@@ -60,28 +62,28 @@ jobs:
             <servers>
               <server>
                 <id>danubetech-maven-snapshots</id>
-                <username>${{ env.DANUBETECH_MAVEN_INTERNAL_USERNAME }}</username>
-                <password>${{ env.DANUBETECH_MAVEN_INTERNAL_PASSWORD }}</password>
+                <username>${{ env.DANUBETECH_MAVEN_NEXUS_USERNAME }}</username>
+                <password>${{ env.DANUBETECH_MAVEN_REPOSILITE_PASSWORD }}</password>
               </server>
               <server>
                 <id>danubetech-maven-releases</id>
-                <username>${{ env.DANUBETECH_MAVEN_INTERNAL_USERNAME }}</username>
-                <password>${{ env.DANUBETECH_MAVEN_INTERNAL_PASSWORD }}</password>
+                <username>${{ env.DANUBETECH_MAVEN_NEXUS_USERNAME }}</username>
+                <password>${{ env.DANUBETECH_MAVEN_REPOSILITE_PASSWORD }}</password>
               </server>
               <server>
                 <id>danubetech-maven-internal</id>
-                <username>${{ env.DANUBETECH_MAVEN_INTERNAL_USERNAME }}</username>
-                <password>${{ env.DANUBETECH_MAVEN_INTERNAL_PASSWORD }}</password>
+                <username>${{ env.DANUBETECH_MAVEN_NEXUS_USERNAME }}</username>
+                <password>${{ env.DANUBETECH_MAVEN_NEXUS_PASSWORD }}</password>
               </server>
               <server>
                 <id>danubetech-maven-internal-releases</id>
-                <username>${{ env.DANUBETECH_MAVEN_INTERNAL_USERNAME }}</username>
-                <password>${{ env.DANUBETECH_MAVEN_INTERNAL_PASSWORD }}</password>
+                <username>${{ env.DANUBETECH_MAVEN_NEXUS_USERNAME }}</username>
+                <password>${{ env.DANUBETECH_MAVEN_NEXUS_PASSWORD }}</password>
               </server>
               <server>
                 <id>danubetech-maven-internal-snapshots</id>
-                <username>${{ env.DANUBETECH_MAVEN_INTERNAL_USERNAME }}</username>
-                <password>${{ env.DANUBETECH_MAVEN_INTERNAL_PASSWORD }}</password>
+                <username>${{ env.DANUBETECH_MAVEN_NEXUS_USERNAME }}</username>
+                <password>${{ env.DANUBETECH_MAVEN_NEXUS_PASSWORD }}</password>
               </server>
             </servers>
           </settings>
