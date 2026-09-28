@@ -39,6 +39,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+      packages: read
 
     steps:
       - name: Import Secrets maven
@@ -282,8 +283,11 @@ jobs:
 
       - name: Build image generic
         if: ${{ inputs.GLOBAL_FRAMEWORK != 'maven' && inputs.GLOBAL_FRAMEWORK != 'triggered' && inputs.GLOBAL_FRAMEWORK != 'did-science' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}"
+          docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}:${{ env.RELEASE_VERSION }}-${{ steps.short_sha.outputs.SHORT_SHA }}" \
+          --secret id=NODE_AUTH_TOKEN
 
       - name: Login user to repo
         run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
