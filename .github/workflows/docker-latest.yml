@@ -44,6 +44,9 @@ jobs:
 
   publish-image:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@master
 
@@ -60,10 +63,13 @@ jobs:
             ci/data/gh-workflows/maven-danubetech-nexus password | DANUBETECH_MAVEN_INTERNAL_PASSWORD
 
       - name: Run build image action
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           docker build . -f "${{ inputs.PATH_TO_DOCKERFILE }}" -t "${{ inputs.GLOBAL_REPO_NAME }}/${{ inputs.GLOBAL_IMAGE_NAME }}" \
           --secret id=DANUBETECH_MAVEN_INTERNAL_USERNAME \
-          --secret id=DANUBETECH_MAVEN_INTERNAL_PASSWORD
+          --secret id=DANUBETECH_MAVEN_INTERNAL_PASSWORD \
+          --secret id=NODE_AUTH_TOKEN
 
       - name: Login user to repo
         run: echo "${{ env.DOCKER_PASSWORD }}" | docker login "${{ inputs.GLOBAL_REPO_NAME }}" -u "${{ env.DOCKER_USERNAME }}" --password-stdin
